@@ -1,0 +1,27 @@
+Input File: iris.csv
+Number of Dimensions: 4
+Dataset Size: 150
+Value of k: 3
+Distance Metric: Minkowski
+Period of high_resolution_clock in this version of C++ implementation: 1 seconds
+File read time: 0.0079399 seconds
+kNN computation time: 0.0063945 seconds
+Grouping time: 0.015943 seconds
+RAND index computing time: 1.91e-05 seconds
+Ouptup file save time: 0.0018004 seconds
+Total time: 0.0320969 seconds
+Number of real groups: 3
+Number of predicted groups: 25
+Minimum explored cluster size: 1 (Cluster index: 5)
+Maximum explored cluster size: 25 (Cluster index: 0)
+Average explored cluster size: 5.36
+Variance of explored clusters: 23.0304
+Minimum real cluster size: 50 (Cluster index: 0)
+Maximum real cluster size: 50 (Cluster index: 0)
+Average real cluster size: 50
+Variance of real clusters: 0
+Variance of true labels: 0.645161
+Variance of predicted labels: 0.611863
+Point pairs: 31
+RAND index: 0.956989
+Adjusted RAND index: -0.68276
