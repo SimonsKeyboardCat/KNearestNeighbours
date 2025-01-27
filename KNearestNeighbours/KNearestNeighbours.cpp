@@ -1,28 +1,58 @@
-﻿#include <iostream>
-#include <vector>
+﻿#include <vector>
 #include <algorithm>
 #include <cmath>
 #include <numeric>
-#include "iris_data.h"
 #include "Timer.h"
+#include "generic_data.h"
+#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <map>
 #include <chrono>
-
-typedef std::vector<IrisData> DataPoint;
-typedef std::vector<DataPoint> DataSet;
-typedef std::vector<int> Labels;
+#include <string>
 
 enum DistanceMetric {
+	Manhattan,
     Euclidean,
     Minkowski,
     Chebyshev,
     TriangleInequality
 };
 
-IrisDataSet load_iris_data(const std::string& filename) {
-    IrisDataSet data;
+int get_label_iris(const std::string& species) {
+    if (species == "Iris-setosa") return 0;
+    else if (species == "Iris-versicolor") return 1;
+    else if (species == "Iris-virginica") return 2;
+    else {
+        std::cerr << "Unknown species: " << species << std::endl;
+        return -1;
+    }
+}
+
+std::string get_glass_label(int id) {
+    switch (id) {
+    case 1:
+        return "building_windows_float_processed";
+    case 2:
+        return "building_windows_non_float_processed";
+    case 3:
+        return "vehicle_windows_float_processed";
+    case 4:
+        return "vehicle_windows_non_float_processed";
+    case 5:
+        return "containers";
+    case 6:
+        return "tableware";
+    case 7:
+        return "headlamps";
+    default:
+        std::cerr << "Unknown label: " << id << std::endl;
+        return "Unknown";
+    }
+}
+
+GenericDataSet<double> load_glass_data(const std::string& filename) {
+    GenericDataSet<double> data;
     std::ifstream file(filename);
 
     if (!file.is_open()) {
@@ -33,114 +63,193 @@ IrisDataSet load_iris_data(const std::string& filename) {
     std::string line;
     while (getline(file, line)) {
         std::istringstream ss(line);
-        IrisData iris;
+        DataSetPoint<double> point;
+
         std::string temp;
+        for (int i = 0; i < 11; ++i) {
+            std::getline(ss, temp, ',');
+            if (i == 0) {
+                continue;
+            }
+            else if (i == 10)
+            {
+                point.group_id = atoi(temp.c_str());
+                point.label = get_glass_label(point.group_id);
+            }
+            else {
+                point.features.push_back(std::stod(temp));
+            }
+            point.features.push_back(std::stod(temp));
+        }
 
-        std::getline(ss, temp, ',');
-        iris.sepal_length = std::stod(temp);
-        std::getline(ss, temp, ',');
-        iris.sepal_width = std::stod(temp);
-        std::getline(ss, temp, ',');
-        iris.petal_length = std::stod(temp);
-        std::getline(ss, temp, ',');
-        iris.petal_width = std::stod(temp);
-        std::getline(ss, iris.species);
-
-        data.push_back(iris);
+        data.push_back(point);
     }
 
     file.close();
     return data;
 }
 
-int get_label(const std::string& species) {
-    if (species == "Iris-setosa") return 0;
-    else if (species == "Iris-versicolor") return 1;
-    else if (species == "Iris-virginica") return 2;
-    else {
-        std::cerr << "Unknown species: " << species << std::endl;
+GenericDataSet<double> load_iris_data(const std::string& filename) {
+    GenericDataSet<double> data;
+    std::ifstream file(filename);
+
+    if (!file.is_open()) {
+        std::cerr << "Error: Could not open file " << filename << std::endl;
+        return data;
+    }
+
+    std::string line;
+    while (getline(file, line)) {
+        std::istringstream ss(line);
+        DataSetPoint<double> point;
+
+        std::string temp;
+        for (int i = 0; i < 4; ++i) {
+            std::getline(ss, temp, ',');
+            point.features.push_back(std::stod(temp));
+        }
+
+        std::getline(ss, point.label);
+		point.group_id = get_label_iris(point.label);
+
+        data.push_back(point);
+    }
+
+    file.close();
+    return data;
+}
+
+GenericDataSet<double> load_wine_data(const std::string& filename) {
+    GenericDataSet<double> data;
+    std::ifstream file(filename);
+
+    if (!file.is_open()) {
+        std::cerr << "Error: Could not open file " << filename << std::endl;
+        return data;
+    }
+
+    std::string line;
+    while (getline(file, line)) {
+        std::istringstream ss(line);
+        DataSetPoint<double> point;
+
+        std::string temp;
+        for (int i = 0; i < 13; ++i) {
+            std::getline(ss, temp, ',');
+            if (i == 0) {
+				point.label = temp;
+                point.group_id = atoi(point.label.c_str());
+            }
+            else {
+				point.features.push_back(std::stod(temp));
+            }
+            
+        }
+
+        data.push_back(point);
+    }
+
+    file.close();
+    return data;
+}
+
+template <typename T>
+bool save_out_file(const GenericDataSet<T>& dataset, const std::vector<int>& predicted_labels, const std::string& output_file_name) {
+    std::ofstream output_file("OUT_" + output_file_name + ".csv");
+
+    if (!output_file.is_open()) {
+        std::cerr << "Error creating output file" << std::endl;
+        return false;
+    }
+
+    output_file << "id,";
+    for (size_t i = 0; i < dataset[0].features.size(); ++i) {
+        output_file << "feature_" << i + 1;
+        if (i < dataset[0].features.size() - 1) {
+            output_file << ",";
+        }
+    }
+    output_file << ",RId(real_group),CId(predicted_group)\n";
+
+    for (size_t i = 0; i < dataset.size(); ++i) {
+        output_file << i << ",";
+        for (const auto& feature : dataset[i].features) {
+            output_file << feature << ",";
+        }
+        output_file << dataset[i].group_id << "," << predicted_labels[i] << std::endl;
+    }
+
+    output_file.close();
+    return true;
+}
+
+template <typename T>
+double minkowski_distance(const DataSetPoint<T>& p1, const DataSetPoint<T>& p2, double p) {
+    if (p1.features.size() != p2.features.size()) {
+        std::cerr << "Error: Feature dimensions do not match." << std::endl;
         return -1;
     }
-}
 
-std::string get_species(int label) {
-    switch (label) {
-    case 0:
-        return "Iris-setosa";
-    case 1:
-        return "Iris-versicolor";
-    case 2:
-        return "Iris-virginica";
-    default:
-        std::cerr << "Unknown label: " << label << std::endl;
-        return "Unknown";
-    }
-}
-
-double minkowski_distance(const IrisData& query_point, const IrisData& target_point, double p) {
     double sum_powers = 0.0;
-
-    sum_powers += std::pow(std::abs(query_point.petal_length - target_point.petal_length), p);
-    sum_powers += std::pow(std::abs(query_point.petal_width - target_point.petal_width), p);
-    sum_powers += std::pow(std::abs(query_point.sepal_length - target_point.sepal_length), p);
-    sum_powers += std::pow(std::abs(query_point.sepal_width - target_point.sepal_width), p);
+    for (size_t i = 0; i < p1.features.size(); ++i) {
+        sum_powers += std::pow(std::abs(p1.features[i] - p2.features[i]), p);
+    }
 
     return std::pow(sum_powers, 1.0 / p);
 }
 
-double chebyshev_distance(const IrisData& query_point, const IrisData& target_point) {
-    double max_diff = 0.0;
+template <typename T>
+double chebyshev_distance(const DataSetPoint<T>& p1, const DataSetPoint<T>& p2) {
+    if (p1.features.size() != p2.features.size()) {
+        std::cerr << "Error: Feature dimensions do not match." << std::endl;
+        return -1;
+    }
 
-    max_diff = std::max(max_diff, std::abs(query_point.petal_length - target_point.petal_length));
-    max_diff = std::max(max_diff, std::abs(query_point.petal_width - target_point.petal_width));
-    max_diff = std::max(max_diff, std::abs(query_point.sepal_length - target_point.sepal_length));
-    max_diff = std::max(max_diff, std::abs(query_point.sepal_width - target_point.sepal_width));
+    double max_diff = 0.0;
+    for (size_t i = 0; i < p1.features.size(); ++i) {
+        max_diff = std::max(max_diff, std::abs(p1.features[i] - p2.features[i]));
+    }
 
     return max_diff;
 }
 
-double triangle_inequality_distance(const IrisData& query_point, const IrisData& target_point, const IrisData& reference_point) {
+template <typename T>
+double triangle_inequality_distance(const DataSetPoint<T>& query_point, const DataSetPoint<T>& target_point, const DataSetPoint<T>& reference_point) {
     double dist_query_ref = minkowski_distance(query_point, reference_point, 2);
     double dist_target_ref = minkowski_distance(target_point, reference_point, 2);
 
     return std::abs(dist_query_ref - dist_target_ref);
 }
 
-int knn(IrisDataSet& iris_dataset, const IrisData& query_point, int k, DistanceMetric metric = DistanceMetric::Euclidean, const IrisData& reference_point = {}) {
+template <typename T>
+double calculate_distance(const DataSetPoint<T>& query_point, const DataSetPoint<T>& target_point, DistanceMetric metric, const int minkowski_p = 2, const DataSetPoint<T>& reference_point = {}) {
+    switch (metric) {
+    case DistanceMetric::Manhattan:
+        return minkowski_distance(query_point, target_point, 1.0);
+    case DistanceMetric::Euclidean:
+        return minkowski_distance(query_point, target_point, 2.0);
+    case DistanceMetric::Minkowski:
+        return minkowski_distance(query_point, target_point, minkowski_p); // (p=2) Eucledian distance (p=1) Manhattan distance
+    case DistanceMetric::Chebyshev:
+        return chebyshev_distance(query_point, target_point);
+    case DistanceMetric::TriangleInequality:
+        if (!reference_point.group_id) {
+            std::cerr << "Reference point not specified for Triangle Inequality" << std::endl;
+            return -1;
+        }
+        return triangle_inequality_distance(query_point, target_point, reference_point);
+    default:
+        std::cerr << "Unknown distance metric" << std::endl;
+        return -1;
+    }
+}
+
+template <typename T>
+int knn(const GenericDataSet<T>& dataset, const DataSetPoint<T>& query_point, int k, DistanceMetric metric = DistanceMetric::Euclidean, const int minkowski_p = 2, const DataSetPoint<T>& reference_point = {}) {
     std::vector<std::pair<double, int>> distances;
 
-    for (size_t i = 0; i < iris_dataset.size(); ++i) {
-        IrisData target_point = {
-            iris_dataset[i].petal_length,
-            iris_dataset[i].petal_width,
-            iris_dataset[i].sepal_length,
-            iris_dataset[i].sepal_width,
-            iris_dataset[i].species
-        };
-
-        double distance;
-        switch (metric) {
-            case DistanceMetric::Euclidean:
-                distance = minkowski_distance(query_point, target_point, 2.0);
-                break;
-            case DistanceMetric::Minkowski:
-                distance = minkowski_distance(query_point, target_point, 2.0); // (p=2) Eucledian distance (p=1) Manhattan distance
-                break;
-            case DistanceMetric::Chebyshev:
-                distance = chebyshev_distance(query_point, target_point);
-                break;
-            case DistanceMetric::TriangleInequality:
-                if (reference_point.species.empty()) {
-                    std::cerr << "Reference point not specified for Triangle Inequality" << std::endl;
-                    return -1;
-                }
-                distance = triangle_inequality_distance(query_point, target_point, reference_point);
-                break;
-            default:
-                std::cerr << "Unknown distance metric" << std::endl;
-                return -1;
-        }
-
+    for (size_t i = 0; i < dataset.size(); ++i) {
+        double distance = calculate_distance(query_point, dataset[i], metric, minkowski_p, reference_point);
         distances.push_back({ distance, static_cast<int>(i) });
     }
 
@@ -149,7 +258,7 @@ int knn(IrisDataSet& iris_dataset, const IrisData& query_point, int k, DistanceM
     std::vector<int> labels;
     for (int i = 0; i < k; ++i) {
         int index = distances[i].second;
-        labels.push_back(get_label(iris_dataset[index].species));
+        labels.push_back((dataset[index].group_id));
     }
 
     std::map<int, int> label_counts;
@@ -235,30 +344,31 @@ double calculate_variance(const std::vector<int>& labels) {
     return sum_squared_diff / labels.size();
 }
 
-double density(IrisDataSet& iris_dataset, const IrisData& query_point, double radius) {
+template <typename T>
+int density(const GenericDataSet<T>& dataset, const DataSetPoint<T>& query_point, double radius, DistanceMetric metric = DistanceMetric::Euclidean, const int minkowski_p = 2, const DataSetPoint<T>& reference_point = {}) {
     int count = 0;
-    for (const auto& target_point : iris_dataset) {
-        if (minkowski_distance(query_point, target_point, 2) <= radius) {
+    for (const auto& target_point : dataset) {
+        if (calculate_distance(query_point, target_point, metric, minkowski_p, reference_point) <= radius) {
             count++;
         }
     }
     return count;
 }
 
-vector<vector<int>> nbc_grouping(IrisDataSet& iris_dataset, double radius, double min_density) {
-    int n = iris_dataset.size();
-    std::vector<std::pair<double, int>> distances;
+template <typename T>
+std::vector<std::vector<int>> nbc_grouping(const GenericDataSet<T>& dataset, double radius, double min_density, DistanceMetric metric = DistanceMetric::Euclidean, const int minkowski_p = 2, const DataSetPoint<T>& reference_point = {}) {
+    int n = dataset.size();
     vector<vector<int>> clusters;
     vector<bool> visited(n, false);
 
     for (int i = 0; i < n; ++i) {
-        if (!visited[i] && density(iris_dataset, iris_dataset[i], radius) >= min_density) {
+        if (!visited[i] && density(dataset, dataset[i], radius, metric, minkowski_p, reference_point) >= min_density) {
             vector<int> cluster;
             cluster.push_back(i);
             visited[i] = true;
 
             for (int j = 0; j < n; ++j) {
-                if (!visited[j] && minkowski_distance(iris_dataset[i], iris_dataset[j], 2) <= radius) {
+                if (!visited[j] && calculate_distance(dataset[i], dataset[j], metric, minkowski_p, reference_point) <= radius) {
                     cluster.push_back(j);
                     visited[j] = true;
                 }
@@ -271,10 +381,11 @@ vector<vector<int>> nbc_grouping(IrisDataSet& iris_dataset, double radius, doubl
     return clusters;
 }
 
-double furthest_dataset_point(IrisDataSet& iris_dataset, const IrisData& query_point) {
+template <typename T>
+double furthest_dataset_point(const GenericDataSet<T>& dataset, const DataSetPoint<T>& query_point, DistanceMetric metric = DistanceMetric::Euclidean, const int minkowski_p = 2, const DataSetPoint<T>& reference_point = {}) {
 	double max_distance = 0.0;
-	for (const auto& target_point : iris_dataset) {
-		double distance = minkowski_distance(query_point, target_point, 2);
+	for (const auto& target_point : dataset) {
+		double distance = calculate_distance(query_point, target_point, metric, minkowski_p, reference_point);
 		if (distance > max_distance) {
 			max_distance = distance;
 		}
@@ -282,17 +393,11 @@ double furthest_dataset_point(IrisDataSet& iris_dataset, const IrisData& query_p
 	return max_distance;
 }
 
-double furthest_neighbour(IrisDataSet& iris_dataset, const IrisData& query_point, int k) {
+template <typename T>
+double furthest_neighbour(const GenericDataSet<T>& dataset, const DataSetPoint<T>& query_point, int k, DistanceMetric metric = DistanceMetric::Euclidean, const int minkowski_p = 2, const DataSetPoint<T>& reference_point = {}) {
 	std::vector<std::pair<double, int>> distances;
-	for (size_t i = 0; i < iris_dataset.size(); ++i) {
-		IrisData target_point = {
-			iris_dataset[i].petal_length,
-			iris_dataset[i].petal_width,
-			iris_dataset[i].sepal_length,
-			iris_dataset[i].sepal_width,
-			iris_dataset[i].species
-		};
-		double distance = minkowski_distance(query_point, target_point, 2.0);
+	for (size_t i = 0; i < dataset.size(); ++i) {
+		double distance = calculate_distance(query_point, dataset[i], metric, minkowski_p, reference_point);
 		distances.push_back({ distance, static_cast<int>(i) });
 	}
 
@@ -302,78 +407,138 @@ double furthest_neighbour(IrisDataSet& iris_dataset, const IrisData& query_point
 
 int main()
 {
+	// User input parameters
+	int dataset_id = 0; // 0: Iris, 1: Wine, 2: Glass
+	int distance_metric_id = 2; // 0: Manhattan, 1: Euclidean, 2: Minkowski, 3: Chebyshev, 4: Triangle Inequality
+
+    int k;
+    double radius;
+    double minimum_density;
+    DistanceMetric metric;
+    int dimensions;
+
+	// Time measurements
     Timer timer_file_input;
 	Timer timer_knn;
 	Timer timer_grouping;
 	Timer timer_rand_index;
-	Timer timer_file_output;
+	Timer timer_file_output; 
+
+	// Variables for storing results
+    int groups_real;
+    vector<int> real_cluster_sizes;
+
+    GenericDataSet<double> dataset_input;
+    string input_file_name;
+    string dataset_name;
+	string metric_name;
+
+    const std::string input_file_name_iris = "iris.csv";
+    const std::string input_file_name_wine = "wine.csv";
+    const std::string input_file_name_glass = "glass.csv";
+
+    GenericDataSet<double> dataset_input_wine = load_wine_data(input_file_name_wine);
+    GenericDataSet<double> dataset_input_glass = load_glass_data(input_file_name_glass);
 
 
-    int k = 3;
-    int dimensions = 4;
-    double radius = 0.5;
-    double minimum_density = 3;
-    int groups_real = 3;
+	// Dataset selection with default parameters
+    switch (dataset_id) {
+        case 0:
+            dataset_name = "iris";
+            input_file_name = input_file_name_iris;
+            timer_file_input.startTimer();
+			dataset_input = load_iris_data(input_file_name);
+            timer_file_input.stopTimer();
+			
 
-    std::string input_file_name = "iris.csv";
-    IrisDataSet iris_dataset = load_iris_data(input_file_name);
-    std::string output_file_name = "_SNN_iris_D" + std::to_string(dimensions) + "_R" + std::to_string(iris_dataset.size()) + "_k" + std::to_string(k);
+            k = 3;
+            dimensions = 4;
+            radius = 0.5;
+            minimum_density = 3;
+            groups_real = 3;
+			real_cluster_sizes = { 50, 50, 50 };
+            break;
+		case 1:
+            dataset_name = "wine";
+			input_file_name = input_file_name_wine;
+            timer_file_input.startTimer();
+            dataset_input = load_wine_data(input_file_name);
+            timer_file_input.stopTimer();
+			
 
+            k = 3;
+            dimensions = 13;
+            radius = 5;
+            minimum_density = 3;
+            groups_real = 3;
+			real_cluster_sizes = { 59, 71, 48 };
+			break;
+		case 2:
+            dataset_name = "glass";
+			input_file_name = input_file_name_glass;
+            timer_file_input.startTimer();
+            dataset_input = load_glass_data(input_file_name);
+            timer_file_input.stopTimer();
+			
 
-	//IrisData query_point = { 5.5,2.4,3.7,1.1, "" };
-    DistanceMetric metric = DistanceMetric::Minkowski;
-    IrisData reference_point = iris_dataset[0];
-    
+            k = 3;
+            dimensions = 11;
+            radius = 0.5;
+            minimum_density = 3;
+            groups_real = 6;
+			real_cluster_sizes = { 70, 76, 17, 13, 9, 29 }; //Note: This dataset has 7 groups, but group with id 4 has no data so it is excluded
+			break;
+		default:
+			std::cerr << "Unknown dataset ID" << std::endl;
+			return 1;
+    }
+
+	switch (distance_metric_id) {
+	    case 0:
+		    metric = DistanceMetric::Manhattan;
+			metric_name = "Manhattan";
+		    break;
+	    case 1:
+		    metric = DistanceMetric::Euclidean;
+			metric_name = "Euclidean";
+		    break;
+	    case 2:
+		    metric = DistanceMetric::Minkowski;
+			metric_name = "Minkowski"; // TODO: Add p value
+		    break;
+	    case 3:
+		    metric = DistanceMetric::Chebyshev;
+			metric_name = "Chebyshev";
+		    break;
+	    case 4:
+		    metric = DistanceMetric::TriangleInequality;
+			metric_name = "Triangle Inequality"; // TODO: Add reference point
+		    break;
+	    default:
+		    std::cerr << "Unknown distance metric ID" << std::endl;
+		    return 1;
+	}
+
+    std::string output_file_name = "_SNN_" + dataset_name + "_D" + std::to_string(dimensions) + "_R" + std::to_string(dataset_input.size()) + "_k" + std::to_string(k) + "_" + metric_name;
 
     std::vector<int> true_labels;
     std::vector<int> predicted_labels;
-	std::vector<IrisData> query_points;
-
 	int groups_predicted;
-
-
-	// Reading test data
-    timer_file_input.startTimer();
-    std::ifstream test_data_file("test_data_iris.csv");
-    if (!test_data_file.is_open()) {
-        std::cerr << "Error opening test data file" << std::endl;
-        return 1;
-    }
-
-    std::string line;
-    while (std::getline(test_data_file, line)) {
-        std::istringstream ss(line);
-        std::string temp;
-
-        IrisData query_point;
-        std::getline(ss, temp, ',');
-        query_point.petal_length = std::stod(temp);
-        std::getline(ss, temp, ',');
-        query_point.petal_width = std::stod(temp);
-        std::getline(ss, temp, ',');
-        query_point.sepal_length = std::stod(temp);
-        std::getline(ss, temp, ',');
-        query_point.sepal_width = std::stod(temp);
-        std::getline(ss, query_point.species);
-
-		query_points.push_back(query_point);
-    }
-    timer_file_input.stopTimer();
-
+    
 
 	// kNN classification
 	timer_knn.startTimer();
-    for (auto query_point : query_points)
+    for (auto query_point : dataset_input)
     {
-        predicted_labels.push_back(knn(iris_dataset, query_point, k, metric));
-        true_labels.push_back(get_label(query_point.species));
+        predicted_labels.push_back(knn(dataset_input, query_point, k, metric));
+        true_labels.push_back(query_point.group_id);
     }
 	timer_knn.stopTimer();
     
 
 	// Grouping the results
 	timer_grouping.startTimer();
-    vector<vector<int>> clusters = nbc_grouping(iris_dataset, radius, minimum_density);
+    vector<vector<int>> clusters = nbc_grouping(dataset_input, radius, minimum_density);
 	groups_predicted = clusters.size();
 
     for (const auto& cluster : clusters) {
@@ -407,19 +572,6 @@ int main()
         cluster_sizes.push_back(cluster.size());
     }
     double explored_cluster_average_size = accumulate(cluster_sizes.begin(), cluster_sizes.end(), 0.0) / clusters.size();
-
-    vector<int> real_cluster_sizes = { 0, 0, 0 };
-    for (size_t i = 0; i < iris_dataset.size(); ++i) {
-        if (get_label(iris_dataset[i].species) == 0) {
-			real_cluster_sizes[0] += 1;
-        }
-        else if (get_label(iris_dataset[i].species) == 1) {
-            real_cluster_sizes[1] += 1;
-		}
-        else if (get_label(iris_dataset[i].species) == 2) {
-            real_cluster_sizes[2] += 1;
-        }
-    }
 
     int real_cluster_min_size = INT_MAX;
     int real_cluster_min_index = -1;
@@ -456,27 +608,7 @@ int main()
 
 	// Output file creation
     timer_file_output.startTimer();
-    std::ofstream output_file("OUT_" + output_file_name + ".csv");
-    if (!output_file.is_open()) {
-        std::cerr << "Error creating output file" << std::endl;
-        return 1;
-    }
-
-    output_file << "id,petal_length,petal_width,sepal_length,sepal_width,real_species,predicted_species\n";
-    int id_output_file = 0;
-    for (auto query_point : query_points)
-    {
-        std::string predicted_species = get_species(predicted_labels[id_output_file]);
-        output_file << id_output_file << ","
-            << query_point.petal_length << ","
-            << query_point.petal_width << ","
-            << query_point.sepal_length << ","
-            << query_point.sepal_width << ","
-            << query_point.species << ","
-            << predicted_species << std::endl;
-
-        id_output_file++;
-    }
+	save_out_file(dataset_input, predicted_labels, output_file_name);
 	timer_file_output.stopTimer();
 
 
@@ -490,31 +622,15 @@ int main()
 	// Stat file creation
     std::ofstream stat_file("STAT_" + output_file_name + ".txt");
     if (!stat_file.is_open()) {
-        std::cerr << "Error creating metadata file" << std::endl;
+        std::cerr << "Error creating stat file" << std::endl;
         return 1;
     }
 
     stat_file << "Input File: " << input_file_name << std::endl;
     stat_file << "Number of Dimensions: " << dimensions << std::endl;
-    stat_file << "Dataset Size: " << iris_dataset.size() << std::endl;
+    stat_file << "Dataset Size: " << dataset_input.size() << std::endl;
     stat_file << "Value of k: " << k << std::endl;
-    stat_file << "Distance Metric: ";
-    switch (metric) {
-    case DistanceMetric::Euclidean:
-        stat_file << "Euclidean" << std::endl;
-        break;
-    case DistanceMetric::Minkowski:
-        stat_file << "Minkowski" << std::endl;
-        break;
-    case DistanceMetric::Chebyshev:
-        stat_file << "Chebyshev" << std::endl;
-        break;
-    case DistanceMetric::TriangleInequality:
-        stat_file << "Triangle Inequality" << std::endl;
-        break;
-    default:
-        stat_file << "Unknown" << std::endl;
-    }
+	stat_file << "Distance Metric: " << metric_name << std::endl;
 
     stat_file << "Period of high_resolution_clock in this version of C++ implementation: " << timer_file_input.getPeriod() << " seconds" << std::endl;
     stat_file << "File read time: " << timer_file_input.getElapsedTime() << " seconds" << std::endl;
@@ -544,6 +660,7 @@ int main()
 	stat_file << "Point pairs: " << true_labels.size() << std::endl;
 	stat_file << "RAND index: " << rand_index << std::endl;
     stat_file << "Adjusted RAND index: " << adjusted_rand_index << std::endl;
+    stat_file.close();
 
 
     // kNN output file creation
@@ -555,23 +672,18 @@ int main()
 
     knn_file << "id,Eps,maxEps,\n";
     int id_knn_file = 0;
-    for (auto query_point : query_points)
+    for (auto query_point : dataset_input)
     {
-		double eps = furthest_neighbour(iris_dataset, query_point, k);
-		double maxEps = furthest_dataset_point(iris_dataset, query_point);
+		double eps = furthest_neighbour(dataset_input, query_point, k);
+		double maxEps = furthest_dataset_point(dataset_input, query_point);
         knn_file << id_knn_file << ","
             << eps << "," 
-            << maxEps << ","
-            << std::endl;
+            << maxEps << std::endl;
 
         id_knn_file++;
     }
-    timer_file_output.stopTimer();
-
-    test_data_file.close();
-    output_file.close();
-	stat_file.close();
 	knn_file.close();
+
 
     return 0;
 }

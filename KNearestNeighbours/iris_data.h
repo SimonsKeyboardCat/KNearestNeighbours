@@ -16,6 +16,6 @@ struct IrisData {
 
 using IrisDataSet = std::vector<IrisData>;
 
-IrisDataSet load_iris_data(const std::string& filename);
+IrisDataSet load_iris_data_temp(const std::string& filename);
 
 #endif

@@ -20,10 +20,13 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="iris_data.h">
+    <ClInclude Include="Timer.h">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
-    <ClInclude Include="Timer.h">
+    <ClInclude Include="generic_data.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
+    <ClInclude Include="KNearestNeighbours.h">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
   </ItemGroup>
@@ -32,8 +35,16 @@
     <None Include="test_data_iris.csv" />
     <None Include="OUT__SNN_iris_D4_R150_k3.csv" />
     <None Include="kNN__SNN_iris_D4_R150_k3.csv" />
+    <None Include="wine.csv" />
+    <None Include="glass.csv" />
+    <None Include="OUT__SNN_wine_D13_R178_k3.csv" />
+    <None Include="kNN__SNN_wine_D13_R178_k3.csv" />
+    <None Include="kNN__SNN_glass_D11_R214_k3.csv" />
+    <None Include="OUT__SNN_glass_D11_R214_k3.csv" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="STAT__SNN_iris_D4_R150_k3.txt" />
+    <Text Include="STAT__SNN_wine_D13_R178_k3.txt" />
+    <Text Include="STAT__SNN_glass_D11_R214_k3.txt" />
   </ItemGroup>
 </Project>

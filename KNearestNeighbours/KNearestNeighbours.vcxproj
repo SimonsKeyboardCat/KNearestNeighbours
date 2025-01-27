@@ -130,17 +130,26 @@
     <ClCompile Include="KNearestNeighbours.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="iris_data.h" />
+    <ClInclude Include="generic_data.h" />
+    <ClInclude Include="KNearestNeighbours.h" />
     <ClInclude Include="Timer.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="glass.csv" />
     <None Include="iris.csv" />
+    <None Include="kNN__SNN_glass_D11_R214_k3.csv" />
     <None Include="kNN__SNN_iris_D4_R150_k3.csv" />
+    <None Include="kNN__SNN_wine_D13_R178_k3.csv" />
+    <None Include="OUT__SNN_glass_D11_R214_k3.csv" />
     <None Include="OUT__SNN_iris_D4_R150_k3.csv" />
+    <None Include="OUT__SNN_wine_D13_R178_k3.csv" />
     <None Include="test_data_iris.csv" />
+    <None Include="wine.csv" />
   </ItemGroup>
   <ItemGroup>
+    <Text Include="STAT__SNN_glass_D11_R214_k3.txt" />
     <Text Include="STAT__SNN_iris_D4_R150_k3.txt" />
+    <Text Include="STAT__SNN_wine_D13_R178_k3.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
